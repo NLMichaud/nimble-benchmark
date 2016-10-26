@@ -263,10 +263,11 @@ nimBenchmarkClass <- setRefClass(
           if(runMCMCs){
             MCMCtests <<- MCMCtestArgs
             if(MCMCtestArgs == 'all')
-              MCMCtests <<- c("MCMCtest_1", "MCMCtest_2")  ## need better test names
+              MCMCtests <<- c("seeds", "birats")  ## need better test names
             if(length(MCMCs == 1)) MCMCs <<- rep(MCMCs, length(MCMCtests))
+            else MCMCs <<- MCMCs
             if(length(niter) == 1) niter <<- rep(niter, length(MCMCtests))
-            
+            else niter <<- niter
             RMCMCmodels <<- list()
             monitors <<- list() ## in future, make customizable monitors
             for(i in seq_along(MCMCtests)){
@@ -280,9 +281,9 @@ nimBenchmarkClass <- setRefClass(
           if(runPFs){
             PFtests <<- PFtestArgs
             if(PFtestArgs == 'all')
-              PFtests <<- c("PFtest_1")  ## need better test names
-            
+              PFtests <<- c("linearGaussianSSM")  ## need better test names
             if(length(PFs == 1)) PFs <<- rep(PFs, length(PFs))
+            else PFs <<- PFs
             if(length(pfControlList) <= 1) {
               tmpList <- list()
               for(i in 1:length(PFtests))
@@ -290,7 +291,9 @@ nimBenchmarkClass <- setRefClass(
               
               pfControlList <<- tmpList
             }
+            else pfControlList <<- pfControlList
             if(length(nparticles) == 1) nparticles <<- rep(nparticles, length(PFtests))
+            else nparticles <<- nparticles
             
             RPFmodels <<- list()
             for(i in seq_along(PFtests)){
@@ -314,17 +317,17 @@ nimBenchmarkClass <- setRefClass(
         },
         
         nimbleBenchmarkModel = function(modelName){
-          if(modelName == "MCMCtest_1"){
+          if(modelName == "seeds"){
             dir = nimble:::getBUGSexampleDir('seeds')
             Rmodel <- readBUGSmodel("seeds", dir = dir, data = NULL, inits = NULL, useInits = TRUE,
                                     check = FALSE)
           }
-          else if(modelName == "MCMCtest_2"){
+          else if(modelName == "birats"){
             dir = nimble:::getBUGSexampleDir('birats')
-            Rmodel <- readBUGSmodel("birats2", dir = dir, data = "birats-data.R", inits = "birats-inits.R", useInits = TRUE,
+            Rmodel <- readBUGSmodel("birats2", dir = dir, data = "birats-data.R", useInits = FALSE,
                                     check = FALSE)
           }
-          else if(modelName == "PFtest_1"){
+          else if(modelName == "linearGaussianSSM"){
             code <- nimbleCode({
               x[1] ~ dnorm(mean = mu0, sd = sigma_x);
               y[1] ~ dnorm(x[1], sd=sigma_y);
@@ -360,7 +363,7 @@ nimBenchmarkClass <- setRefClass(
         },
         
         nimbleLatentName = function(modelName){
-          if(modelName == 'PFtest_1')
+          if(modelName == 'linearGaussianSSM')
             return('x')
           else
             return(NULL)
@@ -426,6 +429,7 @@ nimBenchmarkClass <- setRefClass(
                       CmcmcFunction <- compileNimble(RmcmcFunction, project = RMCMCmodels[[MCMCtest]])
                   })
                   addTimeResult(MCMCtests[MCMCtest], 'nimble_compile', timeResult)
+                  browser()
                   if(setSeed) set.seed(0)
                   for(runNum in 1:nreps){
                     timeResult <- system.time({ CmcmcFunction$run(niter[MCMCtest])})
@@ -458,9 +462,9 @@ nimBenchmarkClass <- setRefClass(
         
         summarizeTimes = function(){
           for(i in seq_along(output)){
-            output[[i]]$timing <<- c(round(summary(output[[i]]$timing[1:nreps]), 1),
+            output[[i]]$timing <<- c(round(summary(output[[i]]$timing[1:nreps]), 2),
                                      St.Dev. = round(sd(output[[i]]$timing[1:nreps]), 2),
-                                     round(output[[i]]$timing['nimble_compile'], 1))
+                                     round(output[[i]]$timing['nimble_compile'], 2))
           }
         }
     )
